@@ -14,23 +14,34 @@ class Forwarder(threading.Thread):
         
         try:
             while True:
-                data = self.dest.recv(4096)
+                data = self.dest.recv(8192) #4096
                 if len(data) == 0:
                     raise Exception("endpoint closed")
                 string = data.decode("utf-8")
-                if string.count("HTTP/1.1") > 1:
-                    string = string[string.find("HTTP/1.1")+8 : ]
+                print("받은 문자열 : ",string)
+                print("HTTP갯수 : ",string.count('HTTP'))
+                if string.count("HTTP/1.1 404 Not Found") >= 1:
+                    print("여기까지는 성공!!!!!!!!!!!이건 안보낸다!!!!!!")
+                else :
                     index = string.find("HTTP/1.1")
-                    string = string[index : ]
-                    self.source.sendall(string)
+                    if index >=0:
+                        print("이거는 보내야한다!!!!!!")
+                        #string = string[string.find("HTTP/1.1")+8 : ]
+                        #index = string.find("HTTP/1.1")
+                        #string = string[index : ]
+                        #string = string[index:]
+                        string = string.encode("utf-8")
+                        self.source.request.sendall(string)
+                #string = string.encode("utf-8")
+                #self.source.request.sendall(string)#request
                 print ("Received from dest: " + str(len(data)))
                 
         except Exception as e:
             print ("EXCEPTION reading from forwarding socket")
             print (e)
 
-        self.source.stop_forwarding()
-        print ("...ending forwarder.")
+        #self.source.stop_forwarding()
+        #print ("...ending forwarder.")
         
     def stop_forwarding(self):
         print ("...closing forwarding socket")
@@ -47,17 +58,26 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                 if len(data) == 0:
                     raise Exception("endpoint closed")
                 string = data.decode("utf-8")
+                print("string : ",string)#string
                 index = string.find("Host: ")
                 index = index + 6
-                string2 = string[index:len(string)]
+                print("index : ",index)#
+                print("host[0] : ", string[index])#
+                string2 = string[index:]
+                print("string2 : ", string2)#
                 index2 = string2.find("\r\n")
+                print("index2 : ", index2)#
+                host = string[index:(index+index2)]
+                print("host :",host)
+                #host = host.encode("utf-8")
+                
                 if index != -1:
                     f = Forwarder(self)
-                    f.dest.connect(string[index:index2])    
+                    f.dest.connect((host,80))    
                     f.start()
-                    string = string + 'GET / HTTP/1.1\r\nHost: test.gilgil.net\r\n\r\n'
+                    string =  'GET / HTTP/1.1\r\nHost: test.gilgil.net\r\n\r\n' + string
                     string = string.encode("utf-8")
-                    f.sendall(string)
+                    f.dest.sendall(string)
                 print ("Received from source: " + str(len(data)))
                 
                 
@@ -65,8 +85,8 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
             print ("EXCEPTION reading from main socket")
             print (e)
 
-        f.stop_forwarding()
-        print ("...finishing handling connection")
+        #f.stop_forwarding()
+        #print ("...finishing handling connection")
 
 
     def stop_forwarding(self):
