@@ -73,11 +73,13 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                 
                 if index != -1:
                     f = Forwarder(self)
-                    f.dest.connect((host,80))    
-                    f.start()
+                    f.dest.connect((host,80))
+                    #원래 여기
                     string =  'GET / HTTP/1.1\r\nHost: test.gilgil.net\r\n\r\n' + string
+                    print("더미 문자열 : ",string)
                     string = string.encode("utf-8")
                     f.dest.sendall(string)
+                    f.start()#바꿔서 여기
                 print ("Received from source: " + str(len(data)))
                 
                 
